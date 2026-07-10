@@ -1,0 +1,4 @@
+interface:
+  display_name: "Domain Engineering"
+  short_description: "Model and implement complex domain logic"
+  default_prompt: "Use $domain-engineering to frame and execute domain modeling, invariant, algorithm, or business-rule work."

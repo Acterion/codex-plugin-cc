@@ -4,13 +4,13 @@
     "name": "OpenAI"
   },
   "metadata": {
-    "description": "Codex plugins to use in Claude Code for delegation and code review.",
+    "description": "Codex plugins for review and tiered GPT-5.6 engineering delegation from Claude Code.",
     "version": "1.0.6"
   },
   "plugins": [
     {
       "name": "codex",
-      "description": "Use Codex from Claude Code to review code or delegate tasks.",
+      "description": "Use Claude for orchestration and Codex for review and difficult GPT-5.6 engineering work.",
       "version": "1.0.6",
       "author": {
         "name": "OpenAI"
