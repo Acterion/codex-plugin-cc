@@ -1,0 +1,4 @@
+interface:
+  display_name: "Backend Engineering"
+  short_description: "Execute difficult backend engineering work"
+  default_prompt: "Use $backend-engineering to frame and execute a backend implementation, migration, reliability, or performance task."

@@ -1,6 +1,6 @@
 # Codex plugin for Claude Code
 
-Use Codex from inside Claude Code for code reviews or to delegate tasks to Codex.
+Use Claude Code for orchestration and product direction while Codex handles reviews and difficult technical implementation.
 
 This plugin is for Claude Code users who want an easy way to start using Codex from the workflow
 they already have.
@@ -9,8 +9,10 @@ they already have.
 
 ## What You Get
 
-- `/codex:review` for a normal read-only Codex review
-- `/codex:adversarial-review` for a steerable challenge review
+- `/codex:review` and `/codex:adversarial-review` for read-only review
+- `/codex:backend` for substantial APIs, data, migrations, reliability, security, and performance work
+- `/codex:domain` for invariants, state machines, algorithms, financial or temporal rules, and business-critical logic
+- `/codex:tiers` for deterministic GPT-5.6 model and reasoning-effort guidance
 - `/codex:rescue`, `/codex:transfer`, `/codex:status`, `/codex:result`, and `/codex:cancel` to delegate work, hand off sessions, and manage background jobs
 
 ## Requirements
@@ -18,19 +20,20 @@ they already have.
 - **ChatGPT subscription (incl. Free) or OpenAI API key.**
   - Usage will contribute to your Codex usage limits. [Learn more](https://developers.openai.com/codex/pricing).
 - **Node.js 18.18 or later**
+- **GPT-5.6 access for the new tiered engineering commands.** Availability is account-dependent; direct `--model` overrides remain supported.
 
 ## Install
 
 Add the marketplace in Claude Code:
 
 ```bash
-/plugin marketplace add openai/codex-plugin-cc
+/plugin marketplace add Acterion/codex-plugin-cc
 ```
 
 Install the plugin:
 
 ```bash
-/plugin install codex@openai-codex
+/plugin install codex@acterion-codex
 ```
 
 Reload plugins:
@@ -68,6 +71,7 @@ One simple first run is:
 
 ```bash
 /codex:review --background
+/codex:backend --tier hard implement idempotent webhook processing
 /codex:status
 /codex:result
 ```
@@ -145,7 +149,8 @@ Examples:
 /codex:rescue investigate why the tests started failing
 /codex:rescue fix the failing test with the smallest safe patch
 /codex:rescue --resume apply the top fix from the last run
-/codex:rescue --model gpt-5.4-mini --effort medium investigate the flaky integration test
+/codex:rescue --tier standard investigate the flaky integration test
+/codex:rescue --model gpt-5.6-terra --effort medium investigate the flaky integration test
 /codex:rescue --model spark fix the issue quickly
 /codex:rescue --background investigate the regression
 ```
@@ -158,9 +163,52 @@ Ask Codex to redesign the database connection to be more resilient.
 
 **Notes:**
 
-- if you do not pass `--model` or `--effort`, Codex chooses its own defaults.
+- if you do not pass `--tier`, `--model`, or `--effort`, rescue uses your Codex defaults.
+- `--tier` accepts `quick`, `standard`, `hard`, `expert`, or `maximum`.
 - if you say `spark`, the plugin maps that to `gpt-5.3-codex-spark`
 - follow-up rescue requests can continue the latest Codex task in the repo
+
+### `/codex:backend`
+
+Hands a backend outcome to the `codex:codex-backend-engineer` subagent. Claude retains product direction and permission boundaries; Codex inspects the repository, chooses the technical plan, implements it, runs checks, repairs failures, and returns evidence.
+
+Backend and domain commands default to the `hard` tier and run in the background unless `--wait` is supplied.
+
+Examples:
+
+```bash
+/codex:backend implement idempotent webhook delivery with duplicate-request tests
+/codex:backend --tier expert migrate the queue worker to lease-based ownership without losing jobs
+/codex:backend --wait --tier standard add cursor pagination to the existing endpoint
+```
+
+### `/codex:domain`
+
+Hands domain modeling and business-critical implementation to the `codex:codex-domain-engineer` subagent.
+
+Examples:
+
+```bash
+/codex:domain replace invoice proration with exact decimal semantics and preserve stored totals
+/codex:domain --tier expert model the order lifecycle as explicit valid state transitions
+/codex:domain --resume apply the migration strategy from the previous domain run
+```
+
+### `/codex:tiers`
+
+Prints the model, effort, task examples, and escalation guidance for each engineering tier:
+
+| Tier | Runtime | Typical work |
+|---|---|---|
+| `quick` | GPT-5.6 Luna, low | narrow mechanical changes with fast targeted tests |
+| `standard` | GPT-5.6 Terra, medium | ordinary features and familiar integrations |
+| `hard` | GPT-5.6 Sol, high | cross-cutting correctness, concurrency, and subsystem work |
+| `expert` | GPT-5.6 Sol, xhigh | long-horizon work with interacting unknowns |
+| `maximum` | GPT-5.6 Sol, max | rare quality-first tasks with unusually costly failure |
+
+Choose the lowest tier that reliably clears the task. Escalate for interacting unknowns, irreversible data changes, concurrency, security, or weak feedback—not merely for a large diff. Explicit `--model` and `--effort` flags override a tier.
+
+The family mapping follows the [official GPT-5.6 model guidance](https://developers.openai.com/api/docs/guides/latest-model).
 
 ### `/codex:transfer`
 
@@ -250,11 +298,18 @@ When the review gate is enabled, the plugin uses a `Stop` hook to run a targeted
 /codex:rescue investigate why the build is failing in CI
 ```
 
+### Hand Off Heavy Engineering
+
+```bash
+/codex:backend --tier hard redesign the retry pipeline to be idempotent and observable
+/codex:domain --tier expert implement exact settlement allocation with invariant tests
+```
+
 ### Start Something Long-Running
 
 ```bash
 /codex:adversarial-review --background
-/codex:rescue --background investigate the flaky test
+/codex:backend --tier expert investigate and fix the flaky distributed test
 ```
 
 Then check in with:
@@ -270,10 +325,10 @@ The Codex plugin wraps the [Codex app server](https://developers.openai.com/code
 
 ### Common Configurations
 
-If you want to change the default reasoning effort or the default model that gets used by the plugin, you can define that inside your user-level or project-level `config.toml`. For example to always use `gpt-5.4-mini` on `high` for a specific project you can add the following to a `.codex/config.toml` file at the root of the directory you started Claude in:
+If you want to change the default reasoning effort or model used by commands without an explicit tier, define it in user-level or project-level `config.toml`. For example:
 
 ```toml
-model = "gpt-5.4-mini"
+model = "gpt-5.6-terra"
 model_reasoning_effort = "high"
 ```
 
@@ -282,6 +337,31 @@ Your configuration will be picked up based on:
 - user-level config in `~/.codex/config.toml`
 - project-level overrides in `.codex/config.toml`
 - project-level overrides only load when the [project is trusted](https://developers.openai.com/codex/config-advanced#project-config-files-codexconfigtoml)
+
+## Agentic Control Loop
+
+The specialist profiles give Codex one compact operating contract:
+
+1. Orient on repository instructions and current behavior.
+2. Frame acceptance criteria, material risks, and the validation ladder.
+3. Implement the complete in-scope change.
+4. Run targeted checks, then broader relevant validation.
+5. Repair failures and rerun affected checks.
+6. Hand back the outcome, changed files, evidence, and material residual risks.
+
+This loop is deliberately not a verbose response template. GPT-5.6 performs better with short, outcome-focused prompts than with accumulated generic instructions. Claude should specify product intent, non-discoverable constraints, approval boundaries, and success criteria; Codex should own the technical path.
+
+Good:
+
+```text
+Implement idempotent webhook processing for duplicate delivery IDs. Preserve the current HTTP contract. Schema migrations are allowed; deployment is not. Add tests proving duplicate deliveries emit one domain event and retries after transient failure succeed.
+```
+
+Avoid:
+
+```text
+Read every file, think step by step, write a detailed plan, ask before every edit, be concise, be exhaustive, verify everything three times, and use best practices.
+```
 
 Check out the Codex docs for more [configuration options](https://developers.openai.com/codex/config-reference).
 

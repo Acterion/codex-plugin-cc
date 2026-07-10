@@ -1,19 +1,19 @@
 {
-  "name": "openai-codex",
+  "name": "acterion-codex",
   "owner": {
-    "name": "OpenAI"
+    "name": "Acterion"
   },
   "metadata": {
-    "description": "Codex plugins to use in Claude Code for delegation and code review.",
-    "version": "1.0.6"
+    "description": "Codex plugins for review and tiered GPT-5.6 engineering delegation from Claude Code.",
+    "version": "1.1.0"
   },
   "plugins": [
     {
       "name": "codex",
-      "description": "Use Codex from Claude Code to review code or delegate tasks.",
-      "version": "1.0.6",
+      "description": "Use Claude for orchestration and Codex for review and difficult GPT-5.6 engineering work.",
+      "version": "1.1.0",
       "author": {
-        "name": "OpenAI"
+        "name": "Acterion"
       },
       "source": "./plugins/codex"
     }

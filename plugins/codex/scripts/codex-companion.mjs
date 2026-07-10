@@ -7,6 +7,7 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 import { parseArgs, splitRawArgumentString } from "./lib/args.mjs";
+import { buildEngineeringPrompt, listEngineeringProfiles } from "./lib/engineering-profiles.mjs";
 import {
     buildPersistentTaskThreadName,
     DEFAULT_CONTINUE_PROMPT,
@@ -26,6 +27,7 @@ import { readStdinIfPiped } from "./lib/fs.mjs";
 import { collectReviewContext, ensureGitRepository, resolveReviewTarget } from "./lib/git.mjs";
 import { binaryAvailable, terminateProcessTree } from "./lib/process.mjs";
 import { loadPromptTemplate, interpolateTemplate } from "./lib/prompts.mjs";
+import { MODEL_TIERS, resolveModelTier } from "./lib/model-tiers.mjs";
 import {
   generateJobId,
   getConfig,
@@ -68,7 +70,7 @@ const ROOT_DIR = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
 const REVIEW_SCHEMA = path.join(ROOT_DIR, "schemas", "review-output.schema.json");
 const DEFAULT_STATUS_WAIT_TIMEOUT_MS = 240000;
 const DEFAULT_STATUS_POLL_INTERVAL_MS = 2000;
-const VALID_REASONING_EFFORTS = new Set(["none", "minimal", "low", "medium", "high", "xhigh"]);
+const VALID_REASONING_EFFORTS = new Set(["none", "minimal", "low", "medium", "high", "xhigh", "max"]);
 const MODEL_ALIASES = new Map([["spark", "gpt-5.3-codex-spark"]]);
 const STOP_REVIEW_TASK_MARKER = "Run a stop-gate review of the previous Claude turn.";
 
@@ -79,7 +81,7 @@ function printUsage() {
       "  node scripts/codex-companion.mjs setup [--enable-review-gate|--disable-review-gate] [--json]",
       "  node scripts/codex-companion.mjs review [--wait|--background] [--base <ref>] [--scope <auto|working-tree|branch>]",
       "  node scripts/codex-companion.mjs adversarial-review [--wait|--background] [--base <ref>] [--scope <auto|working-tree|branch>] [focus text]",
-      "  node scripts/codex-companion.mjs task [--background] [--write] [--resume-last|--resume|--fresh] [--model <model|spark>] [--effort <none|minimal|low|medium|high|xhigh>] [prompt]",
+      `  node scripts/codex-companion.mjs task [--background] [--write] [--resume-last|--resume|--fresh] [--profile <${listEngineeringProfiles().join("|")}>] [--tier <${MODEL_TIERS.map((tier) => tier.name).join("|")}>] [--model <model|spark>] [--effort <none|minimal|low|medium|high|xhigh|max>] [prompt]`,
       "  node scripts/codex-companion.mjs transfer [--source <claude-jsonl>] [--json]",
       "  node scripts/codex-companion.mjs status [job-id] [--all] [--json]",
       "  node scripts/codex-companion.mjs result [job-id] [--json]",
@@ -121,7 +123,7 @@ function normalizeReasoningEffort(effort) {
   }
   if (!VALID_REASONING_EFFORTS.has(normalized)) {
     throw new Error(
-      `Unsupported reasoning effort "${effort}". Use one of: none, minimal, low, medium, high, xhigh.`
+      `Unsupported reasoning effort "${effort}". Use one of: none, minimal, low, medium, high, xhigh, max.`
     );
   }
   return normalized;
@@ -464,7 +466,8 @@ async function executeTaskRun(request) {
 
   const taskMetadata = buildTaskRunMetadata({
     prompt: request.prompt,
-    resumeLast: request.resumeLast
+    resumeLast: request.resumeLast,
+    profile: request.profile
   });
 
   let resumeThreadId = null;
@@ -513,7 +516,11 @@ async function executeTaskRun(request) {
     threadId: result.threadId,
     rawOutput,
     touchedFiles: result.touchedFiles,
-    reasoningSummary: result.reasoningSummary
+    reasoningSummary: result.reasoningSummary,
+    model: request.model ?? null,
+    effort: request.effort ?? null,
+    profile: request.profile ?? null,
+    tier: request.tier ?? null
   };
 
   return {
@@ -537,7 +544,7 @@ function buildReviewJobMetadata(reviewName, target) {
   };
 }
 
-function buildTaskRunMetadata({ prompt, resumeLast = false }) {
+function buildTaskRunMetadata({ prompt, resumeLast = false, profile = null }) {
   if (!resumeLast && String(prompt ?? "").includes(STOP_REVIEW_TASK_MARKER)) {
     return {
       title: "Codex Stop Gate Review",
@@ -545,7 +552,12 @@ function buildTaskRunMetadata({ prompt, resumeLast = false }) {
     };
   }
 
-  const title = resumeLast ? "Codex Resume" : "Codex Task";
+  const profileLabel = profile ? `${profile[0].toUpperCase()}${profile.slice(1)} Engineering` : null;
+  const title = profileLabel
+    ? `Codex ${profileLabel}${resumeLast ? " Resume" : ""}`
+    : resumeLast
+      ? "Codex Resume"
+      : "Codex Task";
   const fallbackSummary = resumeLast ? DEFAULT_CONTINUE_PROMPT : "Task";
   return {
     title,
@@ -601,7 +613,7 @@ function buildTaskJob(workspaceRoot, taskMetadata, write) {
   });
 }
 
-function buildTaskRequest({ cwd, model, effort, prompt, write, resumeLast, jobId }) {
+function buildTaskRequest({ cwd, model, effort, prompt, write, resumeLast, jobId, profile, tier }) {
   return {
     cwd,
     model,
@@ -609,7 +621,9 @@ function buildTaskRequest({ cwd, model, effort, prompt, write, resumeLast, jobId
     prompt,
     write,
     resumeLast,
-    jobId
+    jobId,
+    profile,
+    tier
   };
 }
 
@@ -761,7 +775,7 @@ async function handleReview(argv) {
 
 async function handleTask(argv) {
   const { options, positionals } = parseCommandInput(argv, {
-    valueOptions: ["model", "effort", "cwd", "prompt-file"],
+    valueOptions: ["model", "effort", "tier", "profile", "cwd", "prompt-file"],
     booleanOptions: ["json", "write", "resume-last", "resume", "fresh", "background"],
     aliasMap: {
       m: "model"
@@ -770,9 +784,11 @@ async function handleTask(argv) {
 
   const cwd = resolveCommandCwd(options);
   const workspaceRoot = resolveCommandWorkspace(options);
-  const model = normalizeRequestedModel(options.model);
-  const effort = normalizeReasoningEffort(options.effort);
-  const prompt = readTaskPrompt(cwd, options, positionals);
+  const tier = resolveModelTier(options.tier ?? (options.profile ? "hard" : null));
+  const model = normalizeRequestedModel(options.model ?? tier?.model);
+  const effort = normalizeReasoningEffort(options.effort ?? tier?.effort);
+  const rawPrompt = readTaskPrompt(cwd, options, positionals);
+  const prompt = rawPrompt ? buildEngineeringPrompt(options.profile, rawPrompt) : rawPrompt;
 
   const resumeLast = Boolean(options["resume-last"] || options.resume);
   const fresh = Boolean(options.fresh);
@@ -782,7 +798,8 @@ async function handleTask(argv) {
   const write = Boolean(options.write);
   const taskMetadata = buildTaskRunMetadata({
     prompt,
-    resumeLast
+    resumeLast,
+    profile: options.profile ?? null
   });
 
   if (options.background) {
@@ -797,7 +814,9 @@ async function handleTask(argv) {
       prompt,
       write,
       resumeLast,
-      jobId: job.id
+      jobId: job.id,
+      profile: options.profile ?? null,
+      tier: tier?.name ?? null
     });
     const { payload } = enqueueBackgroundTask(cwd, job, request);
     outputCommandResult(payload, renderQueuedTaskLaunch(payload), options.json);
@@ -816,6 +835,8 @@ async function handleTask(argv) {
         write,
         resumeLast,
         jobId: job.id,
+        profile: options.profile ?? null,
+        tier: tier?.name ?? null,
         onProgress: progress
       }),
     { json: options.json }

@@ -74,12 +74,15 @@ test("continue is not exposed as a user-facing command", () => {
   const commandFiles = fs.readdirSync(path.join(PLUGIN_ROOT, "commands")).sort();
   assert.deepEqual(commandFiles, [
     "adversarial-review.md",
+    "backend.md",
     "cancel.md",
+    "domain.md",
     "rescue.md",
     "result.md",
     "review.md",
     "setup.md",
     "status.md",
+    "tiers.md",
     "transfer.md"
   ]);
 });
@@ -104,7 +107,8 @@ test("rescue command absorbs continue semantics", () => {
   assert.match(rescue, /--background\|--wait/);
   assert.match(rescue, /--resume\|--fresh/);
   assert.match(rescue, /--model <model\|spark>/);
-  assert.match(rescue, /--effort <none\|minimal\|low\|medium\|high\|xhigh>/);
+  assert.match(rescue, /--tier <quick\|standard\|hard\|expert\|maximum>/);
+  assert.match(rescue, /--effort <none\|minimal\|low\|medium\|high\|xhigh\|max>/);
   assert.match(rescue, /task-resume-candidate --json/);
   assert.match(rescue, /AskUserQuestion/);
   assert.match(rescue, /Continue current Codex thread/);
@@ -112,8 +116,8 @@ test("rescue command absorbs continue semantics", () => {
   assert.match(rescue, /run the `codex:codex-rescue` subagent in the background/i);
   assert.match(rescue, /default to foreground/i);
   assert.match(rescue, /Do not forward them to `task`/i);
-  assert.match(rescue, /`--model` and `--effort` are runtime-selection flags/i);
-  assert.match(rescue, /Leave `--effort` unset unless the user explicitly asks for a specific reasoning effort/i);
+  assert.match(rescue, /`--tier`, `--model`, and `--effort` are runtime-selection flags/i);
+  assert.match(rescue, /Leave `--tier` and `--effort` unset unless the user explicitly asks for them/i);
   assert.match(rescue, /If they ask for `spark`, map it to `gpt-5\.3-codex-spark`/i);
   assert.match(rescue, /If the request includes `--resume`, do not ask whether to continue/i);
   assert.match(rescue, /If the request includes `--fresh`, do not ask whether to continue/i);
@@ -132,30 +136,29 @@ test("rescue command absorbs continue semantics", () => {
   assert.match(agent, /Use exactly one `Bash` call/i);
   assert.match(agent, /Do not inspect the repository, read files, grep, monitor progress, poll status, fetch results, cancel jobs, summarize output, or do any follow-up work of your own/i);
   assert.match(agent, /Do not call `review`, `adversarial-review`, `status`, `result`, or `cancel`/i);
-  assert.match(agent, /Leave `--effort` unset unless the user explicitly requests a specific reasoning effort/i);
-  assert.match(agent, /Leave model unset by default/i);
+  assert.match(agent, /Leave `--tier`, `--effort`, and model unset unless the user explicitly requests them/i);
   assert.match(agent, /If the user asks for `spark`, map that to `--model gpt-5\.3-codex-spark`/i);
-  assert.match(agent, /If the user asks for a concrete model name such as `gpt-5\.4-mini`, pass it through with `--model`/i);
+  assert.match(agent, /If the user asks for a concrete model name such as `gpt-5\.6-terra`, pass it through with `--model`/i);
   assert.match(agent, /Return the stdout of the `codex-companion` command exactly as-is/i);
   assert.match(agent, /If the Bash call fails or Codex cannot be invoked, return nothing/i);
-  assert.match(agent, /gpt-5-4-prompting/);
-  assert.match(agent, /only to tighten the user's request into a better Codex prompt/i);
+  assert.match(agent, /gpt-5-6-agentic-routing/);
+  assert.match(agent, /only to preserve an explicit tier choice or remove redundant prompt ceremony/i);
   assert.match(agent, /Do not use that skill to inspect the repository, reason through the problem yourself, draft a solution, or do any independent work/i);
   assert.match(runtimeSkill, /only job is to invoke `task` once and return that stdout unchanged/i);
   assert.match(runtimeSkill, /Do not call `setup`, `review`, `adversarial-review`, `status`, `result`, or `cancel`/i);
-  assert.match(runtimeSkill, /use the `gpt-5-4-prompting` skill to rewrite the user's request into a tighter Codex prompt/i);
-  assert.match(runtimeSkill, /That prompt drafting is the only Claude-side work allowed/i);
-  assert.match(runtimeSkill, /Leave `--effort` unset unless the user explicitly requests a specific effort/i);
-  assert.match(runtimeSkill, /Leave model unset by default/i);
+  assert.match(runtimeSkill, /Use `gpt-5-6-agentic-routing` to preserve explicit tier choices and remove redundant prompt ceremony/i);
+  assert.match(runtimeSkill, /Prompt routing is the only Claude-side work allowed/i);
+  assert.match(runtimeSkill, /Leave `--tier`, `--effort`, and model unset unless the user explicitly requests them/i);
   assert.match(runtimeSkill, /Map `spark` to `--model gpt-5\.3-codex-spark`/i);
   assert.match(runtimeSkill, /If the forwarded request includes `--background` or `--wait`, treat that as Claude-side execution control only/i);
   assert.match(runtimeSkill, /Strip it before calling `task`/i);
-  assert.match(runtimeSkill, /`--effort`: accepted values are `none`, `minimal`, `low`, `medium`, `high`, `xhigh`/i);
+  assert.match(runtimeSkill, /`--tier`: accepted values are `quick`, `standard`, `hard`, `expert`, `maximum`/i);
+  assert.match(runtimeSkill, /`--effort`: accepted values are `none`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`/i);
   assert.match(runtimeSkill, /Do not inspect the repository, read files, grep, monitor progress, poll status, fetch results, cancel jobs, summarize output, or do any follow-up work of your own/i);
   assert.match(runtimeSkill, /If the Bash call fails or Codex cannot be invoked, return nothing/i);
   assert.match(readme, /`codex:codex-rescue` subagent/i);
-  assert.match(readme, /if you do not pass `--model` or `--effort`, Codex chooses its own defaults/i);
-  assert.match(readme, /--model gpt-5\.4-mini --effort medium/i);
+  assert.match(readme, /if you do not pass `--tier`, `--model`, or `--effort`, rescue uses your Codex defaults/i);
+  assert.match(readme, /--model gpt-5\.6-terra --effort medium/i);
   assert.match(readme, /`spark`, the plugin maps that to `gpt-5\.3-codex-spark`/i);
   assert.match(readme, /continue a previous Codex task/i);
   assert.match(readme, /### `\/codex:setup`/);
@@ -187,19 +190,36 @@ test("transfer, result, and cancel commands are exposed as deterministic runtime
   assert.match(resultHandling, /if Codex was never successfully invoked, do not generate a substitute answer at all/i);
 });
 
-test("internal docs use task terminology for rescue runs", () => {
+test("internal docs use GPT-5.6 routing and task terminology", () => {
   const runtimeSkill = read("skills/codex-cli-runtime/SKILL.md");
-  const promptingSkill = read("skills/gpt-5-4-prompting/SKILL.md");
-  const promptRecipes = read("skills/gpt-5-4-prompting/references/codex-prompt-recipes.md");
+  const routingSkill = read("skills/gpt-5-6-agentic-routing/SKILL.md");
+  const promptPractices = read("skills/gpt-5-6-agentic-routing/references/prompt-practices.md");
 
   assert.match(runtimeSkill, /codex-companion\.mjs" task "<raw arguments>"/);
   assert.match(runtimeSkill, /Use `task` for every rescue request/i);
   assert.match(runtimeSkill, /task --resume-last/i);
-  assert.match(promptingSkill, /Use `task` when the task is diagnosis/i);
-  assert.match(promptRecipes, /Codex task prompts/i);
-  assert.match(promptRecipes, /Use these as starting templates for Codex task prompts/i);
-  assert.match(promptRecipes, /## Diagnosis/);
-  assert.match(promptRecipes, /## Narrow Fix/);
+  assert.match(routingSkill, /Keep Claude at the orchestration boundary/i);
+  assert.match(routingSkill, /Prefer a short outcome contract over a stack of generic XML blocks/i);
+  assert.match(promptPractices, /## Good: outcome, boundary, evidence/);
+  assert.match(promptPractices, /## Bad: long procedural choreography/);
+});
+
+test("backend and domain commands route to specialized Codex agents", () => {
+  const backend = read("commands/backend.md");
+  const domain = read("commands/domain.md");
+  const backendAgent = read("agents/codex-backend-engineer.md");
+  const domainAgent = read("agents/codex-domain-engineer.md");
+  const tiers = read("commands/tiers.md");
+
+  assert.match(backend, /subagent_type: "codex:codex-backend-engineer"/);
+  assert.match(domain, /subagent_type: "codex:codex-domain-engineer"/);
+  assert.match(backend, /run it in the background/i);
+  assert.match(domain, /run it in the background/i);
+  assert.match(backendAgent, /task --profile backend --write/);
+  assert.match(domainAgent, /task --profile domain --write/);
+  assert.match(backendAgent, /defaults to the hard tier/i);
+  assert.match(domainAgent, /defaults to the hard tier/i);
+  assert.match(tiers, /gpt-5-6-tiers\.mjs/);
 });
 
 test("hooks keep session-end cleanup and stop gating enabled", () => {
