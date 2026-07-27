@@ -18,7 +18,7 @@ export const MODEL_TIERS = Object.freeze([
   Object.freeze({
     name: "hard",
     level: 3,
-    model: "gpt-5.6",
+    model: "gpt-5.6-sol",
     effort: "high",
     useFor: "Cross-cutting implementation where architecture, correctness, and verification all matter.",
     examples: ["design a transactional workflow", "refactor a subsystem", "repair a concurrency bug"]
@@ -26,7 +26,7 @@ export const MODEL_TIERS = Object.freeze([
   Object.freeze({
     name: "expert",
     level: 4,
-    model: "gpt-5.6",
+    model: "gpt-5.6-sol",
     effort: "xhigh",
     useFor: "Long-horizon technical work with ambiguous root causes or several interacting constraints.",
     examples: ["migrate a persistence layer", "redesign a distributed job runner", "optimize a critical algorithm"]
@@ -34,7 +34,7 @@ export const MODEL_TIERS = Object.freeze([
   Object.freeze({
     name: "maximum",
     level: 5,
-    model: "gpt-5.6",
+    model: "gpt-5.6-sol",
     effort: "max",
     useFor: "Rare quality-first work where a marginal reliability gain justifies the highest latency and usage.",
     examples: ["plan a zero-downtime high-risk migration", "resolve a novel consistency failure", "audit a safety-critical protocol"]

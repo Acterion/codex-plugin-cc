@@ -6,9 +6,9 @@ The plugin uses task tiers, not claims that one configuration is universally bes
 |---|---|---|---|
 | quick | `gpt-5.6-luna` | `low` | localized tests, validation fixes, mechanical changes |
 | standard | `gpt-5.6-terra` | `medium` | endpoints, service extensions, familiar integrations |
-| hard | `gpt-5.6` (Sol) | `high` | transactional workflows, concurrency, subsystem refactors |
-| expert | `gpt-5.6` (Sol) | `xhigh` | ambiguous root causes, distributed redesigns, hard optimization |
-| maximum | `gpt-5.6` (Sol) | `max` | rare, quality-first work with unusually costly failure |
+| hard | `gpt-5.6-sol` | `high` | transactional workflows, concurrency, subsystem refactors |
+| expert | `gpt-5.6-sol` | `xhigh` | ambiguous root causes, distributed redesigns, hard optimization |
+| maximum | `gpt-5.6-sol` | `max` | rare, quality-first work with unusually costly failure |
 
 ## Boundary examples
 

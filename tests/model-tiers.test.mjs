@@ -10,9 +10,9 @@ test("GPT-5.6 tiers map difficulty to model and effort", () => {
     [
       { name: "quick", model: "gpt-5.6-luna", effort: "low" },
       { name: "standard", model: "gpt-5.6-terra", effort: "medium" },
-      { name: "hard", model: "gpt-5.6", effort: "high" },
-      { name: "expert", model: "gpt-5.6", effort: "xhigh" },
-      { name: "maximum", model: "gpt-5.6", effort: "max" }
+      { name: "hard", model: "gpt-5.6-sol", effort: "high" },
+      { name: "expert", model: "gpt-5.6-sol", effort: "xhigh" },
+      { name: "maximum", model: "gpt-5.6-sol", effort: "max" }
     ]
   );
   assert.equal(resolveModelTier("t2").name, "standard");

@@ -5,13 +5,13 @@
   },
   "metadata": {
     "description": "Codex plugins for review and tiered GPT-5.6 engineering delegation from Claude Code.",
-    "version": "1.1.0"
+    "version": "1.1.1"
   },
   "plugins": [
     {
       "name": "codex",
       "description": "Use Claude for orchestration and Codex for review and difficult GPT-5.6 engineering work.",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "author": {
         "name": "Acterion"
       },
