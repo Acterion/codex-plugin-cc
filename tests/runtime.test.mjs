@@ -801,8 +801,8 @@ test("task maps GPT-5.6 tiers to model and reasoning effort", () => {
 
   assert.equal(result.status, 0, result.stderr);
   const fakeState = JSON.parse(fs.readFileSync(statePath, "utf8"));
-  assert.equal(fakeState.lastTurnStart.model, "gpt-5.6-sol");
-  assert.equal(fakeState.lastTurnStart.effort, "xhigh");
+  assert.equal(fakeState.lastTurnStart.model, "gpt-6.2-astra");
+  assert.equal(fakeState.lastTurnStart.effort, "medium");
 });
 
 test("backend profile defaults to hard and injects the agentic control contract", () => {
@@ -822,7 +822,7 @@ test("backend profile defaults to hard and injects the agentic control contract"
 
   assert.equal(result.status, 0, result.stderr);
   const fakeState = JSON.parse(fs.readFileSync(statePath, "utf8"));
-  assert.equal(fakeState.lastTurnStart.model, "gpt-5.6-sol");
+  assert.equal(fakeState.lastTurnStart.model, "gpt-6.2-sol");
   assert.equal(fakeState.lastTurnStart.effort, "high");
   assert.match(fakeState.lastTurnStart.prompt, /backend implementation owner/);
   assert.match(fakeState.lastTurnStart.prompt, /add idempotent delivery/);

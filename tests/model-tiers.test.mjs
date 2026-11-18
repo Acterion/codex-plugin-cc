@@ -4,20 +4,20 @@ import assert from "node:assert/strict";
 import { buildEngineeringPrompt } from "../plugins/codex/scripts/lib/engineering-profiles.mjs";
 import { MODEL_TIERS, renderModelTierGuide, resolveModelTier } from "../plugins/codex/scripts/lib/model-tiers.mjs";
 
-test("GPT-5.6 tiers map difficulty to model and effort", () => {
+test("Codex tiers map difficulty to model and effort", () => {
   assert.deepEqual(
     MODEL_TIERS.map(({ name, model, effort }) => ({ name, model, effort })),
     [
-      { name: "quick", model: "gpt-5.6-luna", effort: "low" },
-      { name: "standard", model: "gpt-5.6-terra", effort: "medium" },
-      { name: "hard", model: "gpt-5.6-sol", effort: "high" },
-      { name: "expert", model: "gpt-5.6-sol", effort: "xhigh" },
-      { name: "maximum", model: "gpt-5.6-sol", effort: "max" }
+      { name: "quick", model: "gpt-6-luna", effort: "low" },
+      { name: "standard", model: "gpt-6.2-sol", effort: "medium" },
+      { name: "hard", model: "gpt-6.2-sol", effort: "high" },
+      { name: "expert", model: "gpt-6.2-astra", effort: "medium" },
+      { name: "maximum", model: "gpt-6.2-astra", effort: "high" }
     ]
   );
   assert.equal(resolveModelTier("t2").name, "standard");
   assert.equal(resolveModelTier("max").name, "maximum");
-  assert.throws(() => resolveModelTier("impossible"), /Unsupported GPT-5\.6 tier/);
+  assert.throws(() => resolveModelTier("impossible"), /Unsupported Codex tier/);
 });
 
 test("tier guide explains all tiers and escalation", () => {
